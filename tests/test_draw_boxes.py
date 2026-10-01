@@ -5,11 +5,9 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
+from src.classes import normalize_class_name
 from src.models.predict_model import Detection
-from src.visualizations.draw_boxes import (
-    _normalize_class_name,
-    draw_detections,
-)
+from src.visualizations.draw_boxes import draw_detections
 
 
 class TestNormalizeClassName:
@@ -24,7 +22,7 @@ class TestNormalizeClassName:
         ],
     )
     def test_normalizes_class_name(self, value, expected):
-        assert _normalize_class_name(value) == expected
+        assert normalize_class_name(value) == expected
 
 
 class TestDrawDetections:

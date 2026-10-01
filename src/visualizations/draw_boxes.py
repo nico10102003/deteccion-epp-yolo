@@ -5,19 +5,10 @@ from __future__ import annotations
 import cv2
 import numpy as np
 
+from src.classes import is_allowed_class, normalize_class_name
 from src.models.predict_model import Detection
 
-ALLOWED_CLASSES = {
-    "no_helmet",
-    "no_gloves",
-}
-
 RED_COLOR = (220, 50, 50)
-
-
-def _normalize_class_name(class_name: str) -> str:
-    """Normaliza el nombre de una clase para comparaciones."""
-    return class_name.strip().lower().replace("-", "_")
 
 
 def draw_detections(
@@ -33,10 +24,10 @@ def draw_detections(
     annotated = image.copy()
 
     for detection in detections:
-        normalized = _normalize_class_name(detection.class_name)
-
-        if normalized not in ALLOWED_CLASSES:
+        if not is_allowed_class(detection.class_name):
             continue
+
+        normalized = normalize_class_name(detection.class_name)
 
         x1 = int(detection.x1)
         y1 = int(detection.y1)
