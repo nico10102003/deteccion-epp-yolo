@@ -7,13 +7,8 @@ from dataclasses import dataclass
 import cv2
 import numpy as np
 
-from src.models.predict_model import Detection, InferenceResult, predict
-
-# ÚNICAS CLASES PERMITIDAS EN LA APLICACIÓN.
-ALLOWED_CLASSES = {
-    "no_helmet",
-    "no_gloves",
-}
+from src.classes import is_allowed_class, normalize_class_name
+from src.models.predict_model import InferenceResult, predict
 
 
 @dataclass(frozen=True)
@@ -29,44 +24,6 @@ class DetectionResponse:
     num_goggles: int = 0
     num_masks: int = 0
     num_safety_shoes: int = 0
-
-
-def _filter_application_classes(
-    detections: list[Detection],
-) -> list[Detection]:
-    """Conserva únicamente no_helmet y no_gloves."""
-
-    return [
-        detection
-        for detection in detections
-        if detection.class_name.strip().lower().replace("-", "_")
-        in ALLOWED_CLASSES
-    ]
-
-
-def _scale_detections(
-    detections: list[Detection],
-    original_width: int,
-    original_height: int,
-    model_width: int,
-    model_height: int,
-) -> list[Detection]:
-    """Escala las cajas desde las dimensiones del modelo a la imagen original."""
-
-    scale_x = original_width / model_width
-    scale_y = original_height / model_height
-
-    return [
-        Detection(
-            class_name=detection.class_name,
-            confidence=detection.confidence,
-            x1=detection.x1 * scale_x,
-            y1=detection.y1 * scale_y,
-            x2=detection.x2 * scale_x,
-            y2=detection.y2 * scale_y,
-        )
-        for detection in detections
-    ]
 
 
 def run_detection(
@@ -88,51 +45,36 @@ def run_detection(
     if image is None:
         raise ValueError("No se pudo decodificar la imagen recibida.")
 
-    original_height, original_width = image.shape[:2]
-
     inference_result = predict(
         model=model,
         image=image,
         conf_threshold=conf_threshold,
     )
 
-    filtered_detections = _filter_application_classes(
-        inference_result.detections
-    )
-
-    model_height, model_width = image.shape[:2]
-
-    scaled_detections = _scale_detections(
-        detections=filtered_detections,
-        original_width=original_width,
-        original_height=original_height,
-        model_width=model_width,
-        model_height=model_height,
-    )
+    detections = [
+        detection
+        for detection in inference_result.detections
+        if is_allowed_class(detection.class_name)
+    ]
 
     filtered_result = InferenceResult(
-        detections=scaled_detections,
+        detections=detections,
         inference_time_ms=inference_result.inference_time_ms,
     )
 
     num_no_helmets = sum(
-        detection.class_name.strip().lower().replace("-", "_")
-        == "no_helmet"
-        for detection in scaled_detections
+        normalize_class_name(d.class_name) == "no_helmet" for d in detections
     )
-
     num_no_gloves = sum(
-        detection.class_name.strip().lower().replace("-", "_")
-        == "no_gloves"
-        for detection in scaled_detections
+        normalize_class_name(d.class_name) == "no_gloves" for d in detections
     )
 
     if tracker is not None:
         tracker.log_inference(
             inference_time_ms=filtered_result.inference_time_ms,
-            num_detections=len(scaled_detections),
+            num_detections=len(detections),
             conf_threshold=conf_threshold,
-            num_violations=len(scaled_detections),
+            num_violations=len(detections),
         )
 
     return DetectionResponse(

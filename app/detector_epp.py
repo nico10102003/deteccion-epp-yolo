@@ -24,6 +24,7 @@ from streamlit_webrtc import (
     webrtc_streamer,
 )
 
+from src.classes import is_allowed_class
 from src.grpc_service.client import EPPGrpcClient
 from src.models.predict_model import Detection
 from src.visualizations.draw_boxes import draw_detections
@@ -49,11 +50,6 @@ JPEG_QUALITY = 80
 PROCESS_EVERY_N_FRAMES = 2
 
 DEFAULT_CONF_THRESHOLD = 0.25
-
-ALLOWED_CLASSES = {
-    "no_helmet",
-    "no_gloves",
-}
 
 
 class EPPVideoProcessor(VideoProcessorBase):
@@ -143,22 +139,7 @@ class EPPVideoProcessor(VideoProcessorBase):
     ):
         """Conserva únicamente no_helmet y no_gloves."""
 
-        filtered = []
-
-        for detection in detections:
-            normalized = (
-                detection.class_name
-                .strip()
-                .lower()
-                .replace("-", "_")
-            )
-
-            if normalized not in ALLOWED_CLASSES:
-                continue
-
-            filtered.append(detection)
-
-        return filtered
+        return [d for d in detections if is_allowed_class(d.class_name)]
 
     def recv(
         self,
