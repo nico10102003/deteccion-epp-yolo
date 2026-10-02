@@ -50,7 +50,7 @@ class TestDetect:
         response = servicer.Detect(request, grpc_context)
 
         # Assert
-        assert len(response.detections) == 2
+        assert len(response.detections) == 1
 
     def test_preserves_request_id(self, servicer, grpc_context, small_image_bytes):
         # Arrange
@@ -145,10 +145,10 @@ class TestDetect:
 
         # Assert
         box = response.detections[0].box
-        assert box.x1 == pytest.approx(10.0)
-        assert box.y1 == pytest.approx(10.0)
-        assert box.x2 == pytest.approx(50.0)
-        assert box.y2 == pytest.approx(50.0)
+        assert box.x1 == pytest.approx(60.0)
+        assert box.y1 == pytest.approx(20.0)
+        assert box.x2 == pytest.approx(100.0)
+        assert box.y2 == pytest.approx(80.0)
 
     def test_returns_detection_class_name(self, servicer, grpc_context, small_image_bytes):
         """Debe conservar el nombre de la clase detectada."""
@@ -163,7 +163,7 @@ class TestDetect:
         response = servicer.Detect(request, grpc_context)
 
         # Assert
-        assert response.detections[0].class_name == "helmet"
+        assert response.detections[0].class_name == "no-gloves"
 
     def test_returns_detection_confidence(self, servicer, grpc_context, small_image_bytes):
         """Debe conservar la confianza de la detección."""
@@ -178,7 +178,7 @@ class TestDetect:
         response = servicer.Detect(request, grpc_context)
 
         # Assert
-        assert response.detections[0].confidence == pytest.approx(0.91)
+        assert response.detections[0].confidence == pytest.approx(0.77)
 
 
 class TestHealthCheck:

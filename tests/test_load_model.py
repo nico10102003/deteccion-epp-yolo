@@ -58,13 +58,13 @@ class TestGetClassNames:
     def test_returns_model_names_when_available(self):
         # Arrange
         model = MagicMock()
-        model.names = {0: "helmet", 1: "gloves"}
+        model.names = {0: "no_helmet", 1: "no_gloves"}
 
         # Act
         class_names = get_class_names(model)
 
         # Assert
-        assert class_names == ("helmet", "gloves")
+        assert class_names == ("no_helmet", "no_gloves")
 
     def test_falls_back_to_default_when_names_empty(self):
         # Arrange
@@ -80,35 +80,28 @@ class TestGetClassNames:
     def test_returns_model_names_from_list(self):
         # Arrange
         model = MagicMock()
-        model.names = ["helmet", "gloves", "vest"]
+        model.names = ["no_helmet", "no_gloves"]
 
         # Act
         class_names = get_class_names(model)
 
         # Assert
-        assert class_names == ("helmet", "gloves", "vest")
+        assert class_names == ("no_helmet", "no_gloves")
 
     def test_returns_model_names_from_tuple(self):
         # Arrange
         model = MagicMock()
-        model.names = ("helmet", "gloves", "vest")
+        model.names = ("no_helmet", "no_gloves")
 
         # Act
         class_names = get_class_names(model)
 
         # Assert
-        assert class_names == ("helmet", "gloves", "vest")
+        assert class_names == ("no_helmet", "no_gloves")
 
     @pytest.mark.parametrize(
         "expected_class",
-        [
-            "Gloves",
-            "Vest",
-            "Goggles",
-            "helmet",
-            "Mask",
-            "safety_shoe",
-        ],
+        ["no_helmet", "no_gloves"],
     )
     def test_default_class_names_contains_expected(self, expected_class):
         # Arrange

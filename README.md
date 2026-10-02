@@ -1,178 +1,552 @@
-# 🦺 deteccion-epp-yolo
+# 🦺 Detección de incumplimiento de EPP con YOLO11n
 
-![Python](https://img.shields.io/badge/python-3.13-blue)
-![uv](https://img.shields.io/badge/gestor-uv-8A2BE2)
-![Ruff](https://img.shields.io/badge/lint-ruff-red)
-![License](https://img.shields.io/badge/license-MIT-green)
-![Status](https://img.shields.io/badge/status-en%20desarrollo-yellow)
+![Python](https://img.shields.io/badge/Python-3.13-blue)
+![YOLO](https://img.shields.io/badge/YOLO-11n-purple)
+![gRPC](https://img.shields.io/badge/gRPC-Architecture-orange)
+![Streamlit](https://img.shields.io/badge/Streamlit-Interface-red)
+![MLflow](https://img.shields.io/badge/MLflow-Tracking-blue)
+![Tests](https://img.shields.io/badge/Tests-120%20passed-brightgreen)
+![License](https://img.shields.io/badge/License-MIT-green)
 
-Detección de Elementos de Protección Personal (**casco** y **guantes**) en imágenes/video en tiempo real, usando **YOLO11n** (Ultralytics), servido vía **gRPC**, con cliente **Streamlit** y tracking de experimentos/inferencias en **MLflow**.
+## 📌 Descripción
 
-Proyecto académico — Módulo 3 (Talos IA).
+Sistema de inteligencia artificial para la **detección en tiempo real de incumplimientos en el uso de elementos de protección personal (EPP)** mediante visión por computador y el modelo **YOLO11n**.
 
-## 📐 Arquitectura
+El sistema analiza imágenes provenientes de una cámara y detecta específicamente dos tipos de incumplimiento:
 
+* 🔴 `no_helmet`: ausencia de casco de seguridad.
+* 🔴 `no_gloves`: ausencia de guantes de seguridad.
+
+El proyecto implementa una arquitectura desacoplada mediante **gRPC**, seguimiento experimental con **MLflow**, una interfaz interactiva desarrollada con **Streamlit** y despliegue mediante **Docker Compose**.
+
+---
+
+## 🎯 Objetivo
+
+Desarrollar una solución de inteligencia artificial capaz de identificar en tiempo real situaciones de incumplimiento relacionadas con el uso de casco y guantes de seguridad, proporcionando una visualización inmediata de las detecciones.
+
+### Alcance
+
+El modelo final está limitado exclusivamente a las siguientes clases:
+
+| ID | Clase       | Descripción                      |
+| -: | ----------- | -------------------------------- |
+|  0 | `no_helmet` | Persona sin casco de seguridad   |
+|  1 | `no_gloves` | Persona sin guantes de seguridad |
+
+> El sistema no realiza clasificación de EPP completo ni utiliza clases como `helmet`, `gloves`, `mask`, `vest`, `goggles` o `safety_shoe`.
+
+---
+
+## 🤖 Modelo
+
+Modelo utilizado:
+
+```text
+YOLO11n
 ```
-Streamlit (Vista/Cliente) ──gRPC──▶ Servicio de Inferencia (Controlador + Modelo YOLO11n)
-                                            │
-                                            ▼
-                                       MLflow Tracking
+
+Modelo final:
+
+```text
+models/trained/epp_no_compliance_yolo11n_final.pt
 ```
 
-Ver diagrama interactivo en [`docs/arquitectura.html`](docs/arquitectura.html) (generado con Archify).
+### Métricas de evaluación
 
-### Patrón MVC
+| Métrica           |   Resultado |
+| ----------------- | ----------: |
+| Precision global  |       0.799 |
+| Recall global     |       0.692 |
+| mAP@50            |       0.765 |
+| mAP@50-95         |       0.372 |
+| Accuracy          |  95.64498 % |
+| AUC-ROC           |  98.07549 % |
+| Precision         |     0.84852 |
+| Recall            |     0.68301 |
+| F1-Score          |     0.75682 |
+| mAP@50            |     0.75589 |
+| mAP@50-95         |     0.36119 |
+| Latencia promedio |   43.651 ms |
+| Latencia P95      |   48.338 ms |
+| Throughput        | 22.9087 FPS |
 
-| Capa | Módulo | Responsabilidad |
-|---|---|---|
-| Modelo | `src/models/load_model.py`, `src/models/predict_model.py` | Carga de YOLO11n y ejecución de inferencia |
-| Controlador | `src/data/preprocess_img.py`, `src/visualizations/draw_boxes.py`, `src/integrator.py` | Preprocesamiento, orquestación y anotación de resultados |
-| Vista/Cliente | `app/detector_epp.py` | Interfaz Streamlit que consume el servicio gRPC |
-| Servicio | `src/grpc_service/` | Contrato `.proto`, servidor y cliente gRPC |
-| Tracking | `src/tracking/mlflow_tracker.py` | Registro de runs en MLflow |
+### Rendimiento por clase
 
-## 🧰 Stack
+| Clase       | Precision | Recall | mAP@50 | mAP@50-95 |
+| ----------- | --------: | -----: | -----: | --------: |
+| `no_helmet` |     0.842 |  0.772 |  0.836 |     0.462 |
+| `no_gloves` |     0.756 |  0.613 |  0.694 |     0.283 |
 
-- **Modelo**: [YOLO11n](https://docs.ultralytics.com/models/yolo11/) (Ultralytics)
-- **Dataset**: [PPE Detection with Gloves](https://universe.roboflow.com/ppe-detection-82plm/ppe-detection-with-gloves) (Roboflow)
-- **Servicio**: gRPC (contratos `.proto`)
-- **Frontend**: Streamlit
-- **Tracking**: MLflow
-- **Gestión de entorno**: uv (Python 3.13)
-- **Calidad**: Ruff, pytest
+---
 
-## 🚀 Instalación
+## 🏗️ Arquitectura
+
+El sistema utiliza una arquitectura desacoplada donde la interfaz de usuario, la lógica de comunicación y la inferencia del modelo se encuentran separadas.
+
+```text
+┌──────────────────────────────┐
+│          Streamlit           │
+│      Interfaz de usuario     │
+└──────────────┬───────────────┘
+               │
+               │ gRPC
+               ▼
+┌──────────────────────────────┐
+│      Inference Service       │
+│       Servicio gRPC          │
+└──────────────┬───────────────┘
+               │
+               ▼
+┌──────────────────────────────┐
+│          YOLO11n             │
+│       Modelo de IA/ML        │
+└──────────────┬───────────────┘
+               │
+               ▼
+       Detecciones:
+       no_helmet
+       no_gloves
+
+               │
+               ▼
+┌──────────────────────────────┐
+│           MLflow             │
+│ Tracking de experimentos     │
+└──────────────────────────────┘
+```
+
+### Diagrama interactivo
+
+El diagrama interactivo de arquitectura se encuentra en:
+
+```text
+docs/arquitectura.html
+```
+
+Puede visualizarse localmente mediante:
 
 ```bash
-# 1. Instalar uv si no lo tienes
-curl -LsSf https://astral.sh/uv/install.sh | sh
+python3 -m http.server 8000 --directory docs
+```
 
-# 2. Clonar el repositorio
-git clone <url-del-repo>
-cd deteccion-epp-yolo
+y posteriormente accediendo a:
 
-# 3. Sincronizar el entorno (crea .venv automáticamente)
+```text
+http://localhost:8000/arquitectura.html
+```
+
+---
+
+## 🔄 Flujo de inferencia
+
+1. El usuario proporciona una imagen o utiliza una cámara.
+2. Streamlit recibe la imagen.
+3. Streamlit envía la solicitud mediante gRPC.
+4. El servicio de inferencia recibe la imagen.
+5. YOLO11n procesa la imagen.
+6. Se detectan las clases `no_helmet` y `no_gloves`.
+7. El servicio devuelve las detecciones.
+8. Streamlit visualiza los resultados.
+9. MLflow permite registrar y consultar información relacionada con las ejecuciones.
+
+---
+
+## 🧩 Organización MVC
+
+El proyecto mantiene una separación de responsabilidades basada en el patrón MVC:
+
+### Model
+
+Contiene los componentes relacionados directamente con el modelo de inteligencia artificial:
+
+```text
+src/models/
+```
+
+Responsabilidades:
+
+* Carga del modelo YOLO11n.
+* Ejecución de inferencia.
+* Procesamiento de resultados.
+
+### Controller
+
+Contiene la lógica de procesamiento y comunicación:
+
+```text
+src/
+```
+
+Responsabilidades:
+
+* Comunicación gRPC.
+* Procesamiento de imágenes.
+* Integración de componentes.
+* Lógica de inferencia.
+
+### View
+
+La interfaz de usuario se encuentra en:
+
+```text
+app/detector_epp.py
+```
+
+Está implementada utilizando Streamlit.
+
+---
+
+## 🌐 Arquitectura gRPC
+
+El proyecto utiliza **gRPC** para separar el cliente de la interfaz de usuario del servicio encargado de realizar la inferencia.
+
+El contrato de comunicación se define mediante Protocol Buffers:
+
+```text
+proto/
+```
+
+La arquitectura permite separar:
+
+```text
+Cliente Streamlit
+       │
+       │ gRPC
+       ▼
+Servicio de inferencia
+       │
+       ▼
+Modelo YOLO11n
+```
+
+Esta separación facilita el mantenimiento, las pruebas y el despliegue independiente de los componentes.
+
+---
+
+## 📊 MLflow
+
+MLflow se utiliza para el seguimiento de experimentos y evaluaciones del modelo.
+
+El servidor puede iniciarse mediante Docker Compose:
+
+```bash
+docker compose up -d
+```
+
+La interfaz de MLflow estará disponible en:
+
+```text
+http://localhost:5000
+```
+
+### Información registrada
+
+El seguimiento contempla información relevante para reproducibilidad y evaluación:
+
+**Parámetros**
+
+* Modelo utilizado.
+* Configuración de inferencia.
+* Umbral de confianza.
+* Configuración de procesamiento.
+* Dataset utilizado.
+* Entorno de ejecución.
+
+**Métricas**
+
+* Accuracy.
+* Precision.
+* Recall.
+* F1-Score.
+* AUC-ROC.
+* mAP@50.
+* mAP@50-95.
+* Latencia promedio.
+* Latencia P95.
+* Throughput.
+
+**Artefactos**
+
+* Resultados de evaluación.
+* Predicciones.
+* Gráficas.
+* Información relacionada con el modelo y el pipeline.
+
+**Tags**
+
+* Entorno.
+* Autor/equipo.
+* Información del proyecto.
+* Referencias de desarrollo.
+
+---
+
+## 🖥️ Interfaz Streamlit
+
+La aplicación proporciona una interfaz para realizar inferencias mediante:
+
+* 📷 Cámara.
+* 🖼️ Imágenes.
+* 📦 Servicio gRPC.
+* 🔴 Visualización de incumplimientos.
+
+Las detecciones de:
+
+```text
+no_helmet
+no_gloves
+```
+Ejemplo de funcionamiento:
+Sin casco =
+<img width="2312" height="1092" alt="no_helmet" src="https://github.com/user-attachments/assets/e6d02aed-4b91-40ce-82ba-cf9b5e5cdafb" />
+
+Sin guantes = 
+<img width="2316" height="1078" alt="no_gloves" src="https://github.com/user-attachments/assets/3da66efc-5188-4e27-a9dd-8372d77d2113" />
+
+son mostradas visualmente sobre la imagen procesada.
+
+---
+
+## 🐳 Docker
+
+El proyecto dispone de un entorno de ejecución mediante Docker Compose.
+
+Servicios principales:
+
+```text
+┌────────────────────┐
+│      Streamlit     │
+│       :8501        │
+└─────────┬──────────┘
+          │
+          ▼
+┌────────────────────┐
+│      Inference     │
+│       :50051       │
+└─────────┬──────────┘
+          │
+          ▼
+       YOLO11n
+
+┌────────────────────┐
+│       MLflow       │
+│       :5000        │
+└────────────────────┘
+```
+
+### Iniciar el sistema
+
+```bash
+docker compose up -d
+```
+
+### Servicios
+
+Streamlit:
+
+```text
+http://localhost:8501
+```
+
+MLflow:
+
+```text
+http://localhost:5000
+```
+
+### Detener el sistema
+
+```bash
+docker compose down
+```
+
+### Consultar logs
+
+```bash
+docker compose logs -f inference
+```
+
+---
+
+## 💻 Ejecución local
+
+### Requisitos
+
+* Python 3.13
+* uv
+* Git
+* Docker
+* Docker Compose
+
+### Instalar dependencias
+
+El entorno está administrado mediante `uv`.
+
+```bash
 uv sync
 ```
 
-### Descargar dataset y colocar el modelo
-
-1. Descarga el dataset desde Roboflow (formato YOLO) en `data/raw/`.
-2. Entrena o descarga los pesos `.pt` de YOLO11n ajustado y colócalos en `models/epp_yolo11n.pt`
-   (ruta configurable con la variable de entorno `EPP_MODEL_PATH`).
-
-### Generar los stubs de gRPC
-
-Los archivos `inference_pb2.py` e `inference_pb2_grpc.py` **no se versionan** (se generan localmente):
-
-```bash
-uv run bash scripts/generate_grpc.sh
-```
-
-## ▶️ Uso
-
-**1. Levantar MLflow** (en una terminal):
-
-```bash
-uv run mlflow server --host 0.0.0.0 --port 5000
-```
-
-**2. Levantar el servicio de inferencia gRPC** (en otra terminal):
-
-```bash
-export MLFLOW_TRACKING_URI=http://127.0.0.1:5000
-export EPP_MODEL_PATH=models/epp_yolo11n.pt
-uv run python -m src.grpc_service.server
-```
-
-**3. Levantar la interfaz Streamlit** (en otra terminal):
+### Ejecutar Streamlit
 
 ```bash
 uv run streamlit run app/detector_epp.py
 ```
 
-Abre `http://localhost:8501`, sube una imagen y presiona **"Ejecutar detección"**.
-
-### Con Docker Compose (todo el stack)
+### Ejecutar pruebas
 
 ```bash
-docker compose up --build
+uv run pytest -q
 ```
+
+Resultado actual:
+
+```text
+120 passed
+```
+
+### Ejecutar Ruff
+
+```bash
+uv run ruff check app src tests scripts
+```
+
+Resultado esperado:
+
+```text
+All checks passed!
+```
+
+---
 
 ## 🧪 Pruebas
 
+El proyecto cuenta actualmente con:
+
+```text
+120 pruebas unitarias
+```
+
+Las pruebas cubren diferentes componentes del sistema, incluyendo:
+
+* Procesamiento de imágenes.
+* Comunicación gRPC.
+* Inferencia.
+* Integración.
+* Validación de datos.
+* Componentes de la aplicación.
+
+La ejecución se realiza mediante:
+
 ```bash
-uv run pytest
+uv run pytest -q
 ```
 
-La suite cubre: preprocesamiento (`test_preprocess_img.py`), dibujo de detecciones
-(`test_draw_boxes.py`), inferencia (`test_predict_model.py`), carga de modelo
-(`test_load_model.py`), orquestación (`test_integrator.py`), tracking MLflow
-(`test_mlflow_tracker.py`) y el servicio gRPC (`test_grpc_server.py`, requiere
-haber generado los stubs). Los tests del modelo/gRPC usan **mocks** de YOLO,
-por lo que no requieren los pesos reales para ejecutarse.
+La cobertura actual se encuentra aproximadamente en:
 
-> Meta del curso: mínimo 120 pruebas unitarias. La base actual está parametrizada
-> para extenderse fácilmente — ver sección "Próximos pasos".
-
-## 🧹 Calidad de código
-
-```bash
-uv run ruff check .
-uv run ruff format .
+```text
+89 %
 ```
 
-## 📁 Estructura del repositorio
+---
 
+## 🌿 Gitflow
+
+El desarrollo del proyecto utiliza una estrategia basada en Gitflow, separando las ramas según su propósito.
+
+```text
+                    ┌──────────────┐
+                    │     main     │
+                    │ versión      │
+                    │   estable    │
+                    └──────▲───────┘
+                           │
+                           │
+                    ┌──────┴───────┐
+                    │   develop    │
+                    │ integración  │
+                    │              │
+                    └──────▲───────┘
+                           │
+              ┌────────────┴────────────┐
+              │                         │
+      ┌───────┴────────┐       ┌────────┴───────┐
+      │    feature/*   │       │    feature/*   │
+      │ nueva función  │       │ documentación  │
+      └────────────────┘       └────────────────┘
 ```
+
+### Ramas principales
+
+**`main`**
+
+Contiene la versión estable del proyecto.
+
+**`develop`**
+
+Contiene la versión de integración y desarrollo.
+
+**`feature/*`**
+
+Se utilizan para desarrollar funcionalidades, correcciones o mejoras específicas sin modificar directamente `develop`.
+
+### Flujo de trabajo
+
+```text
+feature/*
+    │
+    │ desarrollo
+    ▼
+commit
+    │
+    ▼
+push
+    │
+    ▼
+Pull Request
+    │
+    ▼
+develop
+    │
+    │ versión validada
+    ▼
+main
+```
+
+Las modificaciones se desarrollan en ramas `feature/*`. Después de completar y validar una modificación, se crea un Pull Request hacia `develop` para revisión e integración.
+
+Este flujo permite mantener separadas las funcionalidades en desarrollo de las versiones de integración y estable del proyecto.
+
+---
+
+## 📁 Estructura del proyecto
+
+```text
 deteccion-epp-yolo/
-├── data/{raw,processed,external}
+│
+├── app/
+│   └── detector_epp.py
+│
+├── data/
+│   ├── external/
+│   ├── processed/
+│   └── raw/
+│
+├── docs/
+│   └── arquitectura.html
+│
+├── models/
+│   └── trained/
+│       └── epp_no_compliance_yolo11n_final.pt
+│
+├── proto/
+│   └── *.proto
+│
+├── reports/
+│
+├── scripts/
+│
 ├── src/
-│   ├── data/preprocess_img.py
-│   ├── models/{load_model.py, predict_model.py}
-│   ├── visualizations/draw_boxes.py
-│   ├── grpc_service/{inference.proto, server.py, client.py}
-│   ├── tracking/mlflow_tracker.py
-│   └── integrator.py
-├── app/detector_epp.py          # Vista Streamlit
-├── tests/                       # pytest
-├── scripts/generate_grpc.sh
-├── docs/arquitectura.html       # Diagrama Archify
-├── Dockerfile / docker-compose.yml
-├── pyproject.toml               # uv + ruff + pytest config
-└── README.md
+│   ├── data/
+│   ├── features/
 ```
-
-## 🌳 Gitflow
-
-- `main`: versión estable / entregable.
-- `develop`: integración de features.
-- `feature/*`: una rama por funcionalidad, mergeada a `develop` vía Pull Request
-  usando la plantilla en [`.github/PULL_REQUEST_TEMPLATE.md`](.github/PULL_REQUEST_TEMPLATE.md).
-
-## 📊 MLflow: qué se registra
-
-| Señal | Contenido |
-|---|---|
-| Params | referencia del modelo en el Hub, umbral de confianza, config de preprocesamiento |
-| Metrics | nº de detecciones, nº de incumplimientos, latencia de inferencia (ms) |
-| Tags | licencia del modelo, ambiente, servicio |
-
-## 🗺️ Próximos pasos
-
-1. **Completar hasta 120 pruebas unitarias**: extender los `@pytest.mark.parametrize`
-   existentes con más casos límite (imágenes corruptas, múltiples clases simultáneas,
-   umbrales extremos 0.0/1.0, concurrencia del servidor gRPC).
-2. **Entrenar/ajustar YOLO11n** sobre el dataset real de Roboflow y registrar la
-   evaluación (precision/recall/F1/mAP50) con `MLflowTracker.log_evaluation`.
-2. **Video en tiempo real**: extender `app/detector_epp.py` para procesar streams
-   de webcam (frame a frame) en vez de solo imágenes estáticas.
-3. **CI/CD (Módulo 4)**: pipeline GitLab `test → build → deploy` hacia un Droplet
-   de DigitalOcean.
-4. **Autenticación/TLS** en el canal gRPC para el despliegue en producción.
-5. **Diagrama Archify**: generar `docs/arquitectura.html` (Architecture + Sequence
-   para la ruta de inferencia) con `npx skills add tt-a1i/archify -g`.
-
-## 📄 Licencia
-
-MIT — ver [`LICENSE`](LICENSE).

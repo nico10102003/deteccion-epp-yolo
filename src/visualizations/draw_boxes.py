@@ -1,48 +1,33 @@
-"""Funciones para dibujar las detecciones de EPP sobre imágenes."""
+"""Funciones para dibujar incumplimientos de EPP sobre imágenes."""
 
 from __future__ import annotations
 
 import cv2
 import numpy as np
 
+from src.classes import is_allowed_class, normalize_class_name
 from src.models.predict_model import Detection
 
-
-def _normalize_class_name(class_name: str) -> str:
-    """Normaliza el nombre de una clase para comparaciones."""
-    return class_name.strip().lower().replace("-", "_")
-
-
-def _color_for_class(class_name: str) -> tuple[int, int, int]:
-    """Devuelve el color BGR correspondiente a una clase."""
-
-    normalized = _normalize_class_name(class_name)
-
-    if normalized in {"no_helmet", "no_gloves"}:
-        return (220, 50, 50)
-
-    if normalized in {"helmet", "gloves"}:
-        return (46, 204, 113)
-
-    if normalized == "person":
-        return (160, 160, 160)
-
-    return (46, 204, 113)
+RED_COLOR = (220, 50, 50)
 
 
 def draw_detections(
     image: np.ndarray,
     detections: list[Detection],
 ) -> np.ndarray:
-    """Dibuja las detecciones sobre una copia de la imagen."""
+    """Dibuja únicamente detecciones de no_helmet y no_gloves.
 
-    if not detections:
-        return image.copy()
+    Las detecciones de incumplimiento se muestran en rojo.
+    Cualquier otra clase recibida se ignora.
+    """
 
     annotated = image.copy()
 
     for detection in detections:
-        color = _color_for_class(detection.class_name)
+        if not is_allowed_class(detection.class_name):
+            continue
+
+        normalized = normalize_class_name(detection.class_name)
 
         x1 = int(detection.x1)
         y1 = int(detection.y1)
@@ -53,11 +38,11 @@ def draw_detections(
             annotated,
             (x1, y1),
             (x2, y2),
-            color,
+            RED_COLOR,
             2,
         )
 
-        label = f"{detection.class_name} {detection.confidence:.2f}"
+        label = f"{normalized} {detection.confidence:.2f}"
 
         cv2.putText(
             annotated,
@@ -65,7 +50,7 @@ def draw_detections(
             (x1, max(y1 - 5, 15)),
             cv2.FONT_HERSHEY_SIMPLEX,
             0.5,
-            color,
+            RED_COLOR,
             1,
             cv2.LINE_AA,
         )
