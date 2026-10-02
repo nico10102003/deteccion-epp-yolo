@@ -15,8 +15,13 @@ class TestRunDetection:
         mock_yolo_model,
         small_image_bytes,
     ):
-        response = run_detection(mock_yolo_model, small_image_bytes)
+        # Arrange
+        model = mock_yolo_model
 
+        # Act
+        response = run_detection(model, small_image_bytes)
+
+        # Assert
         assert isinstance(response, EPPDetectionResponse)
 
     def test_counts_helmet_correctly(
@@ -24,84 +29,120 @@ class TestRunDetection:
         mock_yolo_model,
         small_image_bytes,
     ):
+        # Arrange
+        expected_helmets = 1
+
+        # Act
         response = run_detection(mock_yolo_model, small_image_bytes)
 
-        assert response.num_helmets == 1
+        # Assert
+        assert response.num_helmets == expected_helmets
 
     def test_counts_gloves_correctly(
         self,
         mock_yolo_model,
         small_image_bytes,
     ):
+        # Arrange
+        expected_gloves = 0
+
+        # Act
         response = run_detection(mock_yolo_model, small_image_bytes)
 
-        assert response.num_gloves == 0
+        # Assert
+        assert response.num_gloves == expected_gloves
 
     def test_counts_vests_correctly(
         self,
         mock_yolo_model,
         small_image_bytes,
     ):
+        # Arrange
+        expected_vests = 0
+
+        # Act
         response = run_detection(mock_yolo_model, small_image_bytes)
 
-        assert response.num_vests == 0
+        # Assert
+        assert response.num_vests == expected_vests
 
     def test_counts_goggles_correctly(
         self,
         mock_yolo_model,
         small_image_bytes,
     ):
+        # Arrange
+        expected_goggles = 0
+
+        # Act
         response = run_detection(mock_yolo_model, small_image_bytes)
 
-        assert response.num_goggles == 0
-
+        # Assert
+        assert response.num_goggles == expected_goggles
 
     def test_counts_safety_shoes_correctly(
         self,
         mock_yolo_model,
         small_image_bytes,
     ):
+        # Arrange
+        expected_safety_shoes = 0
+
+        # Act
         response = run_detection(mock_yolo_model, small_image_bytes)
 
-        assert response.num_safety_shoes == 0
+        # Assert
+        assert response.num_safety_shoes == expected_safety_shoes
 
     def test_counts_total_detections(
         self,
         mock_yolo_model,
         small_image_bytes,
     ):
+        # Arrange
+        expected_detections = 2
+
+        # Act
         response = run_detection(mock_yolo_model, small_image_bytes)
 
-        assert response.num_detections == 2
+        # Assert
+        assert response.num_detections == expected_detections
 
     def test_propagates_conf_threshold_to_model(
         self,
         mock_yolo_model,
         small_image_bytes,
     ):
+        # Arrange
+        conf_threshold = 0.6
+
+        # Act
         run_detection(
             mock_yolo_model,
             small_image_bytes,
-            conf_threshold=0.6,
+            conf_threshold=conf_threshold,
         )
 
+        # Assert
         _, kwargs = mock_yolo_model.predict.call_args
-
-        assert kwargs["conf"] == 0.6
+        assert kwargs["conf"] == conf_threshold
 
     def test_calls_tracker_when_provided(
         self,
         mock_yolo_model,
         small_image_bytes,
     ):
+        # Arrange
         tracker = MagicMock()
 
+        # Act
         run_detection(
             mock_yolo_model,
             small_image_bytes,
             tracker=tracker,
         )
 
+        # Assert
         tracker.log_inference_run.assert_called_once()
 
     def test_does_not_call_tracker_when_none(
@@ -109,12 +150,17 @@ class TestRunDetection:
         mock_yolo_model,
         small_image_bytes,
     ):
+        # Arrange
+        tracker = None
+
+        # Act
         response = run_detection(
             mock_yolo_model,
             small_image_bytes,
-            tracker=None,
+            tracker=tracker,
         )
 
+        # Assert
         assert response is not None
 
     def test_tracker_receives_expected_kwargs(
@@ -122,18 +168,21 @@ class TestRunDetection:
         mock_yolo_model,
         small_image_bytes,
     ):
+        # Arrange
         tracker = MagicMock()
+        conf_threshold = 0.4
 
+        # Act
         run_detection(
             mock_yolo_model,
             small_image_bytes,
-            conf_threshold=0.4,
+            conf_threshold=conf_threshold,
             tracker=tracker,
         )
 
+        # Assert
         _, kwargs = tracker.log_inference_run.call_args
-
-        assert kwargs["conf_threshold"] == 0.4
+        assert kwargs["conf_threshold"] == conf_threshold
         assert kwargs["num_detections"] == 2
         assert kwargs["num_violations"] == 0
 
@@ -147,10 +196,15 @@ class TestRunDetection:
         small_image_bytes,
         conf,
     ):
+        # Arrange
+        model = mock_yolo_model
+
+        # Act
         response = run_detection(
-            mock_yolo_model,
+            model,
             small_image_bytes,
             conf_threshold=conf,
         )
 
+        # Assert
         assert response.inference_result is not None
