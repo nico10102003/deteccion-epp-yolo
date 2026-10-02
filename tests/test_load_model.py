@@ -16,60 +16,99 @@ from src.models.load_model import (
 
 class TestLoadModel:
     def test_raises_when_file_missing(self, tmp_path):
+        # Arrange
         missing_path = tmp_path / "no_such_model.pt"
         load_model.cache_clear()
 
+        # Act / Assert
         with pytest.raises(ModelLoadError):
             load_model(str(missing_path))
 
     def test_error_message_mentions_path(self, tmp_path):
+        # Arrange
         missing_path = tmp_path / "ghost.pt"
         load_model.cache_clear()
 
+        # Act / Assert
         with pytest.raises(ModelLoadError, match="ghost.pt"):
             load_model(str(missing_path))
 
     def test_load_model_raises_when_model_cannot_be_loaded(self, tmp_path):
+        # Arrange
         model_path = tmp_path / "invalid_model.pt"
         model_path.write_text("not a real YOLO model")
-
         load_model.cache_clear()
 
+        # Act / Assert
         with pytest.raises(ModelLoadError):
             load_model(str(model_path))
 
 
 class TestGetClassNames:
     def test_returns_default_when_model_is_none(self):
-        assert get_class_names(None) == DEFAULT_CLASS_NAMES
+        # Arrange
+        model = None
+
+        # Act
+        class_names = get_class_names(model)
+
+        # Assert
+        assert class_names == DEFAULT_CLASS_NAMES
 
     def test_returns_model_names_when_available(self):
+        # Arrange
         model = MagicMock()
         model.names = {0: "no_helmet", 1: "no_gloves"}
 
-        assert get_class_names(model) == ("no_helmet", "no_gloves")
+        # Act
+        class_names = get_class_names(model)
+
+        # Assert
+        assert class_names == ("no_helmet", "no_gloves")
 
     def test_falls_back_to_default_when_names_empty(self):
+        # Arrange
         model = MagicMock()
         model.names = {}
 
-        assert get_class_names(model) == DEFAULT_CLASS_NAMES
+        # Act
+        class_names = get_class_names(model)
+
+        # Assert
+        assert class_names == DEFAULT_CLASS_NAMES
 
     def test_returns_model_names_from_list(self):
+        # Arrange
         model = MagicMock()
         model.names = ["no_helmet", "no_gloves"]
 
-        assert get_class_names(model) == ("no_helmet", "no_gloves")
+        # Act
+        class_names = get_class_names(model)
+
+        # Assert
+        assert class_names == ("no_helmet", "no_gloves")
 
     def test_returns_model_names_from_tuple(self):
+        # Arrange
         model = MagicMock()
         model.names = ("no_helmet", "no_gloves")
 
-        assert get_class_names(model) == ("no_helmet", "no_gloves")
+        # Act
+        class_names = get_class_names(model)
+
+        # Assert
+        assert class_names == ("no_helmet", "no_gloves")
 
     @pytest.mark.parametrize(
         "expected_class",
         ["no_helmet", "no_gloves"],
     )
     def test_default_class_names_contains_expected(self, expected_class):
-        assert expected_class in DEFAULT_CLASS_NAMES
+        # Arrange
+        default_names = DEFAULT_CLASS_NAMES
+
+        # Act
+        is_present = expected_class in default_names
+
+        # Assert
+        assert is_present

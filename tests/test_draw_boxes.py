@@ -22,23 +22,33 @@ class TestNormalizeClassName:
         ],
     )
     def test_normalizes_class_name(self, value, expected):
-        assert normalize_class_name(value) == expected
+        # Arrange
+        class_name = value
+
+        # Act
+        normalized = normalize_class_name(class_name)
+
+        # Assert
+        assert normalized == expected
 
 
 class TestDrawDetections:
     """Pruebas del dibujo de cajas."""
 
     def test_returns_copy_of_image(self):
+        # Arrange
         image = np.zeros((100, 100, 3), dtype=np.uint8)
 
+        # Act
         result = draw_detections(image, [])
 
+        # Assert
         assert result is not image
         assert result.shape == image.shape
 
     def test_draws_no_helmet_detection(self):
+        # Arrange
         image = np.zeros((100, 100, 3), dtype=np.uint8)
-
         detection = Detection(
             class_name="no_helmet",
             confidence=0.90,
@@ -48,13 +58,15 @@ class TestDrawDetections:
             y2=50,
         )
 
+        # Act
         result = draw_detections(image, [detection])
 
+        # Assert
         assert np.any(result != image)
 
     def test_draws_no_gloves_detection(self):
+        # Arrange
         image = np.zeros((100, 100, 3), dtype=np.uint8)
-
         detection = Detection(
             class_name="no_gloves",
             confidence=0.85,
@@ -64,13 +76,15 @@ class TestDrawDetections:
             y2=60,
         )
 
+        # Act
         result = draw_detections(image, [detection])
 
+        # Assert
         assert np.any(result != image)
 
     def test_normalizes_hyphenated_class(self):
+        # Arrange
         image = np.zeros((100, 100, 3), dtype=np.uint8)
-
         detection = Detection(
             class_name="no-helmet",
             confidence=0.90,
@@ -80,13 +94,15 @@ class TestDrawDetections:
             y2=50,
         )
 
+        # Act
         result = draw_detections(image, [detection])
 
+        # Assert
         assert np.any(result != image)
 
     def test_ignores_unknown_class(self):
+        # Arrange
         image = np.zeros((100, 100, 3), dtype=np.uint8)
-
         detection = Detection(
             class_name="helmet",
             confidence=0.95,
@@ -96,13 +112,15 @@ class TestDrawDetections:
             y2=50,
         )
 
+        # Act
         result = draw_detections(image, [detection])
 
+        # Assert
         assert np.array_equal(result, image)
 
     def test_ignores_gloves_class(self):
+        # Arrange
         image = np.zeros((100, 100, 3), dtype=np.uint8)
-
         detection = Detection(
             class_name="gloves",
             confidence=0.95,
@@ -112,13 +130,15 @@ class TestDrawDetections:
             y2=50,
         )
 
+        # Act
         result = draw_detections(image, [detection])
 
+        # Assert
         assert np.array_equal(result, image)
 
     def test_draws_multiple_allowed_detections(self):
+        # Arrange
         image = np.zeros((120, 120, 3), dtype=np.uint8)
-
         detections = [
             Detection(
                 class_name="no_helmet",
@@ -138,13 +158,15 @@ class TestDrawDetections:
             ),
         ]
 
+        # Act
         result = draw_detections(image, detections)
 
+        # Assert
         assert np.any(result != image)
 
     def test_accepts_uppercase_class_name(self):
+        # Arrange
         image = np.zeros((100, 100, 3), dtype=np.uint8)
-
         detection = Detection(
             class_name="NO_GLOVES",
             confidence=0.88,
@@ -154,13 +176,15 @@ class TestDrawDetections:
             y2=50,
         )
 
+        # Act
         result = draw_detections(image, [detection])
 
+        # Assert
         assert np.any(result != image)
 
     def test_accepts_class_name_with_spaces(self):
+        # Arrange
         image = np.zeros((100, 100, 3), dtype=np.uint8)
-
         detection = Detection(
             class_name=" no_helmet ",
             confidence=0.88,
@@ -170,6 +194,8 @@ class TestDrawDetections:
             y2=50,
         )
 
+        # Act
         result = draw_detections(image, [detection])
 
+        # Assert
         assert np.any(result != image)

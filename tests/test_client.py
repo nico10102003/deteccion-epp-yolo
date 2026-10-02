@@ -30,167 +30,144 @@ def mock_response():
     return response
 
 
-def test_detect_returns_client_detect_result(mock_response):
+@pytest.fixture
+def grpc_mocks(mock_response):
+    """Mockea el canal gRPC y el stub; devuelve (mock_channel, stub)."""
+    with patch("src.grpc_service.client.grpc.insecure_channel") as mock_channel, patch(
+        "src.grpc_service.client.inference_pb2_grpc.EPPInferenceServiceStub"
+    ) as mock_stub_cls:
+        stub = mock_stub_cls.return_value
+        stub.Detect.return_value = mock_response
+        yield mock_channel, stub
+
+
+@pytest.mark.usefixtures("grpc_mocks")
+def test_detect_returns_client_detect_result():
     """Debe devolver un ClientDetectResult."""
-    with patch("src.grpc_service.client.grpc.insecure_channel"):
-        channel_stub = MagicMock()
-        channel_stub.Detect.return_value = mock_response
+    # Arrange
+    image_bytes = b"image"
 
-        with patch(
-            "src.grpc_service.client.inference_pb2_grpc."
-            "EPPInferenceServiceStub",
-            return_value=channel_stub,
-        ):
-            result = detect(b"image")
+    # Act
+    result = detect(image_bytes)
 
+    # Assert
     assert isinstance(result, ClientDetectResult)
 
 
-def test_detect_uses_default_address(mock_response):
+def test_detect_uses_default_address(grpc_mocks):
     """Debe usar localhost:50051 por defecto."""
-    with patch("src.grpc_service.client.grpc.insecure_channel") as mock_channel:
-        stub = MagicMock()
-        stub.Detect.return_value = mock_response
+    # Arrange
+    mock_channel, _ = grpc_mocks
 
-        with patch(
-            "src.grpc_service.client.inference_pb2_grpc."
-            "EPPInferenceServiceStub",
-            return_value=stub,
-        ):
-            detect(b"image")
+    # Act
+    detect(b"image")
 
+    # Assert
     mock_channel.assert_called_once_with("localhost:50051")
 
 
-def test_detect_uses_custom_address(mock_response):
+def test_detect_uses_custom_address(grpc_mocks):
     """Debe aceptar una dirección personalizada."""
+    # Arrange
+    mock_channel, _ = grpc_mocks
     address = "192.168.1.10:6000"
 
-    with patch("src.grpc_service.client.grpc.insecure_channel") as mock_channel:
-        stub = MagicMock()
-        stub.Detect.return_value = mock_response
+    # Act
+    detect(b"image", address=address)
 
-        with patch(
-            "src.grpc_service.client.inference_pb2_grpc."
-            "EPPInferenceServiceStub",
-            return_value=stub,
-        ):
-            detect(b"image", address=address)
-
+    # Assert
     mock_channel.assert_called_once_with(address)
 
 
-def test_detect_sends_image_bytes(mock_response):
+def test_detect_sends_image_bytes(grpc_mocks):
     """Debe enviar correctamente los bytes de la imagen."""
+    # Arrange
+    _, stub = grpc_mocks
     image_bytes = b"fake-image-data"
 
-    with patch("src.grpc_service.client.grpc.insecure_channel"):
-        stub = MagicMock()
-        stub.Detect.return_value = mock_response
+    # Act
+    detect(image_bytes)
 
-        with patch(
-            "src.grpc_service.client.inference_pb2_grpc."
-            "EPPInferenceServiceStub",
-            return_value=stub,
-        ):
-            detect(image_bytes)
-
+    # Assert
     request = stub.Detect.call_args.args[0]
     assert request.image_data == image_bytes
 
 
 @pytest.mark.parametrize("threshold", [0.1, 0.25, 0.5, 0.75, 0.9])
-def test_detect_sends_conf_threshold(mock_response, threshold):
+def test_detect_sends_conf_threshold(grpc_mocks, threshold):
     """Debe enviar el umbral de confianza recibido."""
-    with patch("src.grpc_service.client.grpc.insecure_channel"):
-        stub = MagicMock()
-        stub.Detect.return_value = mock_response
+    # Arrange
+    _, stub = grpc_mocks
 
-        with patch(
-            "src.grpc_service.client.inference_pb2_grpc."
-            "EPPInferenceServiceStub",
-            return_value=stub,
-        ):
-            detect(b"image", conf_threshold=threshold)
+    # Act
+    detect(b"image", conf_threshold=threshold)
 
+    # Assert
     request = stub.Detect.call_args.args[0]
     assert request.conf_threshold == pytest.approx(threshold)
 
 
-def test_detect_generates_request_id(mock_response):
+def test_detect_generates_request_id(grpc_mocks):
     """Debe generar un identificador único para la solicitud."""
-    with patch("src.grpc_service.client.grpc.insecure_channel"):
-        stub = MagicMock()
-        stub.Detect.return_value = mock_response
+    # Arrange
+    _, stub = grpc_mocks
 
-        with patch(
-            "src.grpc_service.client.inference_pb2_grpc."
-            "EPPInferenceServiceStub",
-            return_value=stub,
-        ):
-            detect(b"image")
+    # Act
+    detect(b"image")
 
+    # Assert
     request = stub.Detect.call_args.args[0]
     assert request.request_id
     assert len(request.request_id) == 36
 
 
-def test_detect_uses_ten_second_timeout(mock_response):
+def test_detect_uses_ten_second_timeout(grpc_mocks):
     """Debe usar un timeout de 10 segundos."""
-    with patch("src.grpc_service.client.grpc.insecure_channel"):
-        stub = MagicMock()
-        stub.Detect.return_value = mock_response
+    # Arrange
+    _, stub = grpc_mocks
 
-        with patch(
-            "src.grpc_service.client.inference_pb2_grpc."
-            "EPPInferenceServiceStub",
-            return_value=stub,
-        ):
-            detect(b"image")
+    # Act
+    detect(b"image")
 
+    # Assert
     assert stub.Detect.call_args.kwargs["timeout"] == 10
 
 
-def test_detect_parses_detection(mock_response):
+@pytest.mark.usefixtures("grpc_mocks")
+def test_detect_parses_detection():
     """Debe convertir una detección gRPC a ClientDetection."""
-    with patch("src.grpc_service.client.grpc.insecure_channel"):
-        stub = MagicMock()
-        stub.Detect.return_value = mock_response
+    # Arrange
+    image_bytes = b"image"
 
-        with patch(
-            "src.grpc_service.client.inference_pb2_grpc."
-            "EPPInferenceServiceStub",
-            return_value=stub,
-        ):
-            result = detect(b"image")
+    # Act
+    result = detect(image_bytes)
 
+    # Assert
     detection = result.detections[0]
-
     assert isinstance(detection, ClientDetection)
     assert detection.class_name == "helmet"
     assert detection.confidence == pytest.approx(0.95)
     assert detection.box == pytest.approx((10.0, 20.0, 100.0, 200.0))
 
 
-def test_detect_returns_inference_metadata(mock_response):
+@pytest.mark.usefixtures("grpc_mocks")
+def test_detect_returns_inference_metadata():
     """Debe conservar tiempo de inferencia y versión del modelo."""
-    with patch("src.grpc_service.client.grpc.insecure_channel"):
-        stub = MagicMock()
-        stub.Detect.return_value = mock_response
+    # Arrange
+    image_bytes = b"image"
 
-        with patch(
-            "src.grpc_service.client.inference_pb2_grpc."
-            "EPPInferenceServiceStub",
-            return_value=stub,
-        ):
-            result = detect(b"image")
+    # Act
+    result = detect(image_bytes)
 
+    # Assert
     assert result.inference_time_ms == pytest.approx(15.5)
     assert result.model_version == "yolo11n-epp-v0.1"
 
 
+@pytest.mark.usefixtures("grpc_mocks")
 def test_detect_parses_multiple_detections(mock_response):
     """Debe convertir correctamente múltiples detecciones."""
+    # Arrange
     second = MagicMock()
     second.class_name = "Gloves"
     second.confidence = 0.88
@@ -198,20 +175,12 @@ def test_detect_parses_multiple_detections(mock_response):
     second.box.y1 = 40.0
     second.box.x2 = 130.0
     second.box.y2 = 140.0
-
     mock_response.detections.append(second)
 
-    with patch("src.grpc_service.client.grpc.insecure_channel"):
-        stub = MagicMock()
-        stub.Detect.return_value = mock_response
+    # Act
+    result = detect(b"image")
 
-        with patch(
-            "src.grpc_service.client.inference_pb2_grpc."
-            "EPPInferenceServiceStub",
-            return_value=stub,
-        ):
-            result = detect(b"image")
-
+    # Assert
     assert len(result.detections) == 2
     assert result.detections[1].class_name == "Gloves"
     assert result.detections[1].box == pytest.approx(
