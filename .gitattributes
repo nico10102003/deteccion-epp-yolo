@@ -1,0 +1,7 @@
+# Makefile y scripts deben usar LF; en Windows un CRLF rompe make con
+# "missing separator" y rompe los shebangs de bash.
+* text=auto
+
+Makefile text eol=lf
+*.mk text eol=lf
+*.sh text eol=lf

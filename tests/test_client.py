@@ -5,8 +5,8 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from src.grpc_service.client import (
-    ClientDetectResult,
     ClientDetection,
+    ClientDetectResult,
     detect,
 )
 
